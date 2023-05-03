@@ -7,7 +7,7 @@ from tkinter import*
 from tkinter import ttk
 from tkinter import messagebox
 import time
-import RPi.GPIO as GPIO #🍓
+#import RPi.GPIO as GPIO #🍓
 import sys
 from threading import * 
 #✏️ 전역변수###################################
@@ -66,7 +66,7 @@ notebook.add(OntimeReportWindow, text=TITLE_ONTIMEREPORT)
 DailyReportWindow=tkinter.Frame(window)
 notebook.add(DailyReportWindow, text=TITLE_DAILYREPORT)
 
-#window.overrideredirect(True)#위 창 제거
+
 
 #####################################################################
 
@@ -115,8 +115,6 @@ label5.place(x=420,y=35)
 
 label6=tkinter.Label(DailyReportWindow,text="식사 횟수" ,font=FONT_NAME)
 label6.place(x=420,y=105)
-
-
 
 
 #모터&로드셀🍓#########################################################
@@ -195,7 +193,7 @@ def print_user_time_control():#🪄사용자 시간제어 + 급여동작
 
 def print_feed_timetable():#🪄급여 시간 시간표리스트
 
-    now_time=date_time.strftime('%H:%M') #🪄현재시간 - 예시 :15:46
+    #now_time=date_time.strftime('%H:%M') #🪄현재시간 - 예시 :15:46
 
     feed_min=min_feed
     if feed_min<10:
@@ -207,9 +205,10 @@ def print_feed_timetable():#🪄급여 시간 시간표리스트
     #print('시스템시간 - now_time:',now_time)#test: 현재시간 출력
     return str_feed_timetable
 
-def motor_weight():#🪄일정무게가 될때까지 모터 실행
+def motor_weight():#🍓일정무게가 될때까지 모터 실행
     global feed_time, feed_amount, ate_time, ate_amount#⏰실시간리포트용
     global feed_done
+
     def servo_control(degree):
         duty=SERVO_MIN_DUTY+(degree*(SERVO_MAX_DUTY-SERVO_MIN_DUTY)/180.0)
         print("Degree=",degree,"duty=",duty)
@@ -228,8 +227,8 @@ def motor_weight():#🪄일정무게가 될때까지 모터 실행
     print('feed_done', feed_done)
     if user_time in return_feed_timetable and recent_weight<=foodamountsetting and feed_done==0:
         while recent_weight<=foodamountsetting:
-    #모터 돌려
-            for i in range(0,361,180):
+            
+            for i in range(0,360,180):
                 print("돌려")
                 servo_control(i)
 
@@ -238,9 +237,9 @@ def motor_weight():#🪄일정무게가 될때까지 모터 실행
             
             hx.power_down()
             hx.power_up()
-            time.sleep(0.3)  
-        #servo.start(0)#모터 헛도는거 멈추도록  
+            time.sleep(0.3)    
         initial_weight+=recent_weight
+
         feed_done=1 
         feed_time=user_time #⏰실시간리포트 : 급여시간
         feed_amount=int(recent_weight)#⏰실시간리포트 : 급여량
@@ -252,37 +251,65 @@ def motor_weight():#🪄일정무게가 될때까지 모터 실행
             treeview.insert("","end",text="",values=treeValueList[i],iid=i)
         #-------------------------------------------------------------------------------------
 
-
 def eating(): #아무것도 안하고 있을때 하는짓짓
 
     global initial_weight
     global user_time
     global return_feed_timetable
-
+    print("--EATING_START--")
+    ate_times=[]
+    
     while True:
-        print("hi")
+        '''
+        if ate_start_time==0:#섭취시작 시간이 비어있으면 
+            ate_start_time=user_time#⏰실시간리포트 : 먹기시작한 시간 ;  while밖에 있으면 계속 0만찍혀
+        #test
+        print('eating/while/ate_start_time', ate_start_time)#값을 한번 받고 고정되어야함.
+        ate_time=user_time#얘는 바뀌는게 맞아
+        print('eating/while/ate_time',ate_time)#얘는 시간을 바꾸는대로 바뀌어야함.
+        '''
 
         ontime_weight=int(hx.get_weight(5))
         if initial_weight>ontime_weight:#이전 값인 initial_weight보다 받아오는 무게가 작다== 먹는 중이다
-            print(f"나 먹는 중이야 initial_weight {initial_weight}, 실시간 무게 : ontime_weight:{ontime_weight}")
+            print(f"-- 먹는 중 -- initial_weight {initial_weight}, 실시간 무게 : ontime_weight:{ontime_weight}")
             feed_time, feed_amount=0,0
-            ate_amount=int(initial_weight-ontime_weight)#⏰실시간리포트 : 먹은양= 초기값-실시간측정무게
-            ate_time=user_time#⏰실시간리포트 : 먹기시작한 시간
-            treeValueList.append([str(feed_time),feed_amount,str(ate_time), ate_amount])#⏰실시간리포트 : (0,0, 먹기시작한시간,먹은양) 형태로 저장 <-계속 계속 나오겠다 얘
-            print('treevaluelist',treeValueList)#⏰실시간리포트 :확인용
-            treeview.delete(*treeview.get_children())#⏰실시간리포트 :기존 있는 표내용 삭제
-            #⏰실시간 리포트 표 삽입---------------------------------------------------------------
-            for i in range(len(treeValueList)):
-                treeview.insert("","end",text="",values=treeValueList[i],iid=i)
-            #-------------------------------------------------------------------------------------
 
+            ate_amount=int(initial_weight-ontime_weight)#⏰실시간리포트 : 먹은양= 초기값-실시간측정무게
+            ate_time=user_time#얘는 바뀌는게 맞아
+            
+            #먹은 시간이 계속 같으면 먹은 무게를 더해
+            ate_time_=str(ate_time)#문자열 취급한 먹은시간 ate_time_에 할당하고
+            ate_times.append(ate_time_)#일단 먹은 시간 저장
+            feed_sum_sametime=0#먹은 무게 더하는용도로 0으로 초기화, 다시 돌아오면 0으로 자동 초기화
+            if ate_time_ in ate_times:#먹은 시간들 저장하는거에 ate_time_이 있다면
+                feed_sum_sametime+=ate_amount#먹은 무게를 더해줄꺼야
+                treeValueList.append([str(feed_time),feed_amount,ate_time_, feed_sum_sametime])#⏰(0,0, 먹기시작한시간,먹은양) 형태로 저장 실시간 리포트용리스트에 올려
+                print('treevaluelist',treeValueList)#⏰실시간리포트 :확인용
+
+                treeview.delete(*treeview.get_children())#⏰실시간리포트 :기존 있는 표내용 삭제
+                #⏰실시간 리포트 표 삽입---------------------------------------------------------------
+                for i in range(len(treeValueList)):
+                    treeview.insert("","end",text="",values=treeValueList[i],iid=i)
+                #-------------------------------------------------------------------------------------
+            
+            else:#먹은 시간들 저장하는거에 ate_time이 없다면
+                treeValueList.append([str(feed_time),feed_amount,ate_time_,ate_amount])#⏰(0,0, 먹기시작한시간,먹은양) 형태로 저장 실시간 리포트용리스트에 올려
+                print('treevaluelist',treeValueList)#⏰실시간리포트 :확인용
+
+                treeview.delete(*treeview.get_children())#⏰실시간리포트 :기존 있는 표내용 삭제
+                #⏰실시간 리포트 표 삽입---------------------------------------------------------------
+                for i in range(len(treeValueList)):
+                    treeview.insert("","end",text="",values=treeValueList[i],iid=i)
+                #-------------------------------------------------------------------------------------
+            
             initial_weight=ontime_weight
+
         hx.power_down()
         hx.power_up()
         time.sleep(1)
         if user_time in return_feed_timetable:#사용자 지정 시간==설정한 급여 시간
-            print("모터 돌려")
             motor_weight()#🍓
+
         
         if user_time == "21:00":
             #데이터 삽입 ----------------------------------
